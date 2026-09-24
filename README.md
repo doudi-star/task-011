@@ -77,3 +77,38 @@ func main() {
 	// Cache len: 1
 }
 ```
+
+Sharded LRU cache example
+=========================
+
+For read-heavy, high-concurrency workloads, the `sharded` package spreads
+keys across a fixed number of independent `lru.Cache` shards, each with its
+own lock, so goroutines no longer contend on a single mutex. The total
+capacity is split deterministically across shards (every shard gets
+`size/shards`, the first `size%shards` shards get one extra slot), so the
+shard capacities always sum to exactly the configured size. See
+[sharded/README.md](sharded/README.md) for the full sharding, capacity and
+concurrency rules.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/hashicorp/golang-lru/v2/sharded"
+)
+
+func main() {
+	// 1024 entries spread across 16 shards
+	c, _ := sharded.NewString[int](1024, 16)
+	for i := 0; i < 2048; i++ {
+		c.Add(fmt.Sprintf("key-%d", i), i)
+	}
+	if c.Len() > 1024 {
+		panic(fmt.Sprintf("bad len: %v", c.Len()))
+	}
+	st := c.Stats()
+	fmt.Printf("shards: %d, capacity: %d, len: %d\n", st.ShardCount, st.Capacity, st.Len)
+}
+```

@@ -26,3 +26,6 @@ _testmain.go
 *.key
 *.pem
 *.log
+
+# Local Go build cache (used when the system cache dir is not writable)
+.gocache/
